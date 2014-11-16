@@ -1,25 +1,156 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Project 1"
+output: html_document
 ---
 
+This is an R Markdown document that will explain how the data was analyzed to answer key questions required for this assignment.
 
-## Loading and preprocessing the data
+### Prep work
+Install libraries
+
+```{r, echo=TRUE}
+library("ggplot2", lib.loc="~/R/win-library/3.1")
+```
+
+read csv file into myData
+```{r, echo=TRUE}
+myData <- read.csv(file="activity.csv",sep=",",header=TRUE)
+```
+
+### Answer first question - "What is the mean total number of steps taken per day"
+
+Sum number of steps for each date using aggregate function, do not include NA values
+
+```{r, echo=TRUE}
+sumbyday <- aggregate (steps ~ date, data=myData,sum,na.rm=TRUE)
+```
+
+
+Plot histogram using ggplot
+
+```{r, echo=TRUE}
+d <- ggplot(sumbyday, aes(x=steps))
+d + geom_histogram() + labs(title="Total number of steps taken each day")
+```
+
+Calculate the mean and median steps for the daily total
+
+```{r, echo=TRUE}
+smean <- mean(sumbyday$steps)
+smedian <- median(sumbyday$steps)
+```
+The mean steps for the daily total is `r smean`.
+
+The median steps for the daily total is `r smedian`.
+
+### Answer the second question - "What is the average daily acitivy pattern?"
+
+Calculate the average number of steps per 5-minute interval across all days using aggregate function
+```{r, echo=TRUE}
+meanbyinterval <- aggregate (steps ~ interval, data=myData,mean,na.rm=TRUE)
+```
+
+Plot mean # of steps by 5-minute interval using qplot
+```{r, echo=TRUE}
+qplot(y=steps, x=interval, data=meanbyinterval,geom ="line", main = "Average number of steps by time interval")
+```
+
+Deterime which 5-minute interval, on average across all days, contains the maxinum number of steps using which.max function
+
+```{r, echo=TRUE}
+inum <- meanbyinterval[which.max(meanbyinterval$steps),1]
+```
+
+Interval with maxinum number of steps is `r inum`.
+
+### Imputing missing values
+
+Calculate the total number of msising values using sum of is.na
+```{r, echo=TRUE}
+numNA <- sum(is.na(myData$steps))
+```
+Number of NA values in data is `r numNA`
+
+Use the mean per interval to fill in the missing NA values, assign to stepsnoNA
+```{r, echo=TRUE}
+myData$stepsnoNA <- myData$steps
+myData$stepsnoNA [is.na(myData$steps)] <-meanbyinterval$steps
+```
+
+Plot the histogram of the updated data with NA filled in by the mean step value at that interval
+
+First calculate total number of steps per day with updated data...
+```{r, echo=TRUE}
+sumbydaynoNA <- aggregate (stepsnoNA ~ date, data=myData,sum,na.rm=TRUE)
+```
+
+...then plot histogram using ggplot
+```{r, echo=TRUE}
+dna <- ggplot(sumbydaynoNA, aes(x=stepsnoNA))
+dna + geom_histogram() + labs(title="Total number of steps taken each day with NA replaced by mean for that interval")
+```
 
 
 
-## What is mean total number of steps taken per day?
+Calculate the mean and median steps for the daily total
+
+```{r, echo=TRUE}
+s2mean <- mean(sumbydaynoNA$stepsnoNA)
+s2median <- median(sumbydaynoNA$stepsnoNA)
+```
+The mean steps for the daily total is `r s2mean`.
+
+The median steps for the daily total is `r s2median`.
+
+Compare summary statisics of both data sets
+Summary statistics  with NA values removed
+```{r, echo=TRUE}
+summary(sumbyday$steps)
+```
+Summary statistics  with NA values changed to mean of steps for that interval
+
+```{r, echo=TRUE}
+summary(sumbydaynoNA$stepsnoNA)
+```
+Impact of imputing mean by interval for NA values is slightly changing the distribution of the histrogram changine 1st, 2nd (median), and 3rd quartiles, but not he average, max or min
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+Create new factor variable for weekday, and fill in values using weekdays function
+```{r, echo=TRUE}
+myData$weekday <- NA
+myData$weekday <- weekdays(as.Date(myData$date))
+```
+
+
+Create new factor variable for weektype; subset data to weekend when weekday is Saturday or Sunday
+```{r, echo=TRUE}
+myData$weektype <- "Weekday"
+myData$weektype [myData$weekday =="Saturday"] <- "Weekend"
+myData$weektype [myData$weekday =="Sunday"] <- "Weekend"
+```
+
+
+Subset data for weekdays and weekends only
+```{r, echo=TRUE}
+weekendonly <- subset(myData, weektype =="Weekend")
+weekdayonly <- subset(myData, weektype =="Weekday")
+```
+
+Get average steps for interval for weekdays and weekends only using imputed steps data 
+```{r, echo=TRUE}
+meanbyweekend <- aggregate (stepsnoNA ~ interval, data=weekendonly,mean,na.rm=TRUE)
+meanbyweekday <- aggregate (stepsnoNA ~ interval, data=weekdayonly,mean,na.rm=TRUE)
+```
 
 
 
-## What is the average daily activity pattern?
+Plot the time series of 5-minute intervals of weekends versus weekdays
+
+```{r, echo=TRUE}
+par(mfrow = c(2, 1))
+with (meanbyweekday, plot (interval, stepsnoNA, type="l",main="weekdays"))
+with (meanbyweekend, plot (interval, stepsnoNA, type="l",main="weekends"))
+```
 
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
